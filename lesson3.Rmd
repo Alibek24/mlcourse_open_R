@@ -1,0 +1,61 @@
+---
+title: "Открытый курс машинного обучения. Тема 3. Классификация, деревья решений и метод ближайших соседей"
+output: html_notebook
+---
+
+```{r}
+library(dplyr)
+library(ggplot2)
+library(rpart)
+library(rpart.plot)
+library(plotmo)
+```
+
+```{r}
+xx = seq(0, 1, by = 1/50)
+df = as.data.frame(cbind(xx, as.vector(2 * xx * (1 - xx)), 1))
+df = rbind(df, as.data.frame(cbind(xx, 4 * xx * (1 - xx), 2)))
+df = rbind(df, as.data.frame(cbind(xx, sapply(xx, function(x) {-x * log2(x) - (1 - x) * log2(1 - x)}), 3)))
+df = rbind(df, as.data.frame(cbind(xx, 1 - pmax(xx, 1 - xx), 4)))
+df = rbind(df, as.data.frame(cbind(xx, 2 - 2 * pmax(xx, 1 - xx), 5)))
+names(df) = c("X", "Y", "group")
+df$group[df$group == 1] = "gini"
+df$group[df$group == 2] = "2* gini"
+df$group[df$group == 3] = "entripy"
+df$group[df$group == 4] = "missclass"
+df$group[df$group == 5] = "2 * missclass"
+
+ggplot(df, aes(x = X, y = Y, group = factor(group))) +
+    geom_line(aes(colour = factor(group), group = factor(group))) +
+    ylab("criterion") + xlab("p+") +
+    ggtitle("Критерии качества как функции от p+ (бинарная классификация)")
+```
+
+
+Пример
+
+Рассмотрим пример применения дерева решений из библиотеки Scikit-learn для синтетических данных.
+Два класса будут сгенерированы из двух нормальных распределений с разными средними.
+
+```{r}
+# первый класс
+set.seed(7)
+train_data = cbind(rnorm(100), rnorm(100))
+train_label = rep(0, 100)
+
+# добавляем второй класс
+train_data = rbind(train_data, cbind(rnorm(100, 2), rnorm(100, 2)))
+train_label = c(train_label, rep(1, 100))
+```
+
+```{r}
+treeDF = as.data.frame(cbind(train_data, train_label))
+ggplot(treeDF, aes(x = V1, y = V2)) + 
+    geom_point(aes(color = factor(train_label))) +
+    geom_abline(intercept = 2, slope = -1)
+```
+
+```{r}
+modelTree = rpart(train_label ~ ., data = treeDF, maxdepth = 3, method = "class")
+prp(modelTree)
+```
